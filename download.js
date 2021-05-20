@@ -1,5 +1,7 @@
 import fs from 'fs';
 import async from 'async';
+import path from 'path';
+import sanitize from 'sanitize-filename';
 
 import downloadSong from './src/downloadSong.js';
 
@@ -20,6 +22,8 @@ async function main() {
 
     console.log(parsed.length);
 
+    const songsFolders = fs.readdirSync(path.resolve('./', 'songs'));
+
     await async.eachLimit(
         parsed,
         1,
@@ -29,12 +33,21 @@ async function main() {
             let downloaded = false;
             while (!downloaded) {
                 try {
+                    const findTitle = sanitize(song.title);
+                    const found = songsFolders.find(folder => folder.includes(findTitle));
+                    if (found) {
+                        console.log(`Download already exists: ${song.title}`);
+                        return;
+                    }
+
                     await downloadSong(song);
+
                     console.log(`Download done: ${song.title}`);
                     downloaded = true;
                 } catch (err) {
                     console.log(`Download error: ${song.title}`);
-                    console.error(err.response.status);
+                    console.error(err?.response?.status);
+                    console.log(err);
 
                     await new Promise(res => setTimeout(res, 5000));
                 }
